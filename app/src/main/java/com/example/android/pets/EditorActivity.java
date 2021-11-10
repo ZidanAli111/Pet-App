@@ -17,6 +17,7 @@ package com.example.android.pets;
 
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
@@ -117,8 +118,6 @@ public class EditorActivity extends AppCompatActivity {
         String weightString=mWeightEditText.getText().toString().trim();
         int weight=Integer.parseInt(weightString);
 
-        PetDbHelper petDbHelper=new PetDbHelper(this);
-        SQLiteDatabase sqLiteDatabase=petDbHelper.getWritableDatabase();
 
         ContentValues contentValues=new ContentValues();
         contentValues.put(PetEntry.COLUMN_PET_NAME,nameString);
@@ -126,16 +125,16 @@ public class EditorActivity extends AppCompatActivity {
         contentValues.put(PetEntry.COLUMN_PET_GENDER,mGender);
         contentValues.put(PetEntry.COLUMN_PET_WEIGHT,weight);
 
-        long newRowId= sqLiteDatabase.insert(PetEntry.TABLE_NAME,null,contentValues);
+        Uri newUri=getContentResolver().insert(PetEntry.CONTENT_URI,contentValues);
 
-        if (newRowId==-1)
+        if (newUri==null)
         {
             Toast.makeText(this,"Error with saving pet",Toast.LENGTH_SHORT).show();
 
         }
         else
         {
-            Toast.makeText(this,"Pet saved with row id: "+newRowId,Toast.LENGTH_SHORT ).show();
+            Toast.makeText(this,"Pet saved",Toast.LENGTH_SHORT ).show();
         }
 
     }

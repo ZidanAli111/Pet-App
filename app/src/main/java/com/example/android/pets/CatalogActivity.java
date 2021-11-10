@@ -18,17 +18,18 @@ package com.example.android.pets;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
 import com.example.android.pets.data.PetContract.PetEntry;
-import com.example.android.pets.data.PetDbHelper;
+
 
 /**
  * Displays list of pets that were entered and stored in the app.
@@ -36,7 +37,7 @@ import com.example.android.pets.data.PetDbHelper;
 public class CatalogActivity extends AppCompatActivity {
 
 
-    private PetDbHelper petDbHelper;
+
 
 
     @Override
@@ -54,10 +55,6 @@ public class CatalogActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-
-
-         petDbHelper=new PetDbHelper(this);
-
     }
 
     @Override
@@ -71,62 +68,77 @@ public class CatalogActivity extends AppCompatActivity {
         // and pass the context, which is the current activity.
 
         // Create and/or open a database to read from it
-        SQLiteDatabase db = petDbHelper.getReadableDatabase();
 
-        String[] project={
+        String[] projection = {
                 PetEntry._ID,
                 PetEntry.COLUMN_PET_NAME,
                 PetEntry.COLUMN_PET_BREED,
                 PetEntry.COLUMN_PET_GENDER,
-                PetEntry.COLUMN_PET_WEIGHT
+                PetEntry.COLUMN_PET_WEIGHT };
 
-                };
+        Log.i("CONTENT_URI","Here is the final CONTENT_URI:"+PetEntry.CONTENT_URI);
 
-        Cursor cursor=db.query(PetEntry.TABLE_NAME,
-                project,
-                null,
-                null,
+        Cursor cursor = getContentResolver().query(
+                PetEntry.CONTENT_URI,
+                projection,
                 null,
                 null,
                 null);
 
 
-        TextView displayView=(TextView) findViewById(R.id.text_view_pet);
-        try {
+        TextView displayView = (TextView) findViewById(R.id.text_view_pet);
 
-            displayView.setText("The pets table contains "+cursor.getCount()+" pets.\n\n");
-            displayView.append(PetEntry._ID+"-"+
-                    PetEntry.COLUMN_PET_NAME+"-"+
-                    PetEntry.COLUMN_PET_BREED+"-"+
-                    PetEntry.COLUMN_PET_GENDER+"-"+
-                    PetEntry.COLUMN_PET_WEIGHT+"\n");
+try {
 
 
-            int idColumnIndex=cursor.getColumnIndex(PetEntry._ID);
-            int nameColumnIndex= cursor.getColumnIndex(PetEntry.COLUMN_PET_NAME);
-            int breedColumnIndex=cursor.getColumnIndex(PetEntry.COLUMN_PET_BREED);
-            int genderColumnIndex=cursor.getColumnIndex(PetEntry.COLUMN_PET_GENDER);
-            int weightColumnIndex=cursor.getColumnIndex(PetEntry.COLUMN_PET_WEIGHT);
+    displayView.setText("The pets table contains " + cursor.getCount() + " pets.\n\n");
+
+    displayView.append(PetEntry._ID + "-" +
+            PetEntry.COLUMN_PET_NAME + "-" +
+            PetEntry.COLUMN_PET_BREED + "-" +
+            PetEntry.COLUMN_PET_GENDER + "-" +
+            PetEntry.COLUMN_PET_WEIGHT + "\n");
 
 
+    int idColumnIndex = cursor.getColumnIndex(PetEntry._ID);
+    int nameColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_NAME);
+    int breedColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_BREED);
+    int genderColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_GENDER);
+    int weightColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_WEIGHT);
 
-            while (cursor.moveToNext())
-            {
-                int currentId=cursor.getInt(idColumnIndex);
-                String currentName=cursor.getString(nameColumnIndex);
-                String currentBreed=cursor.getString(breedColumnIndex);
-                String currentGender=cursor.getString(genderColumnIndex);
-                String currentWeight=cursor.getString(weightColumnIndex);
-                displayView.append(("\n"+currentId+"-"+
-                        currentName+"-"+
-                        currentBreed+"-"+
-                        currentGender+"-"+
-                        currentWeight));
-            }
-        }finally {
-            cursor.close();
-        }
+
+    while (cursor.moveToNext()) {
+        int currentId = cursor.getInt(idColumnIndex);
+        String currentName = cursor.getString(nameColumnIndex);
+        String currentBreed = cursor.getString(breedColumnIndex);
+        String currentGender = cursor.getString(genderColumnIndex);
+        String currentWeight = cursor.getString(weightColumnIndex);
+        displayView.append(("\n" + currentId + "-" +
+                currentName + "-" +
+                currentBreed + "-" +
+                currentGender + "-" +
+                currentWeight));
     }
+}
+finally {
+    cursor.close();
+      }
+
+    }
+
+    private void insertPet(){
+
+        ContentValues contentValues=new ContentValues();
+
+        contentValues.put(PetEntry.COLUMN_PET_NAME,"Toto");
+        contentValues.put(PetEntry.COLUMN_PET_BREED,"Terrier");
+        contentValues.put(PetEntry.COLUMN_PET_GENDER,PetEntry.GENDER_MALE);
+        contentValues.put(PetEntry.COLUMN_PET_WEIGHT,7);
+
+        Uri newUri=getContentResolver().insert(PetEntry.CONTENT_URI,contentValues);
+
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -135,20 +147,7 @@ public class CatalogActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_catalog, menu);
         return true;
     }
-    private void insertPet(){
 
-        SQLiteDatabase sqLiteDatabase=petDbHelper.getWritableDatabase();
-        ContentValues contentValues=new ContentValues();
-
-        contentValues.put(PetEntry.COLUMN_PET_NAME,"Toto");
-        contentValues.put(PetEntry.COLUMN_PET_BREED,"Terrier");
-        contentValues.put(PetEntry.COLUMN_PET_GENDER,PetEntry.GENDER_MALE);
-        contentValues.put(PetEntry.COLUMN_PET_WEIGHT,7);
-
-       long newRowId= sqLiteDatabase.insert(PetEntry.TABLE_NAME,null,contentValues);
-
-
-    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
