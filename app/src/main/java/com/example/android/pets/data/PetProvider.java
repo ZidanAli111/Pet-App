@@ -17,9 +17,6 @@ public class PetProvider extends ContentProvider {
     private static final int PETS = 100;
 
     private static final int PETS_ID = 101;
-
-    private PetDbHelper petDbHelper;
-
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
@@ -28,6 +25,8 @@ public class PetProvider extends ContentProvider {
 
         sUriMatcher.addURI(PetContract.CONTENT_AUTHORITY, PetContract.PATHS_PETS + "/#", PETS_ID);
     }
+
+    private PetDbHelper petDbHelper;
 
     @Override
     public boolean onCreate() {
@@ -66,22 +65,23 @@ public class PetProvider extends ContentProvider {
 
         }
 
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+
         return cursor;
     }
 
     @Override
     public String getType(Uri uri) {
 
-        final int match=sUriMatcher.match(uri);
-        switch (match){
+        final int match = sUriMatcher.match(uri);
+        switch (match) {
 
             case PETS:
                 return PetEntry.CONTENT_LIST_TYPE;
             case PETS_ID:
                 return PetEntry.CONTENT_ITEM_TYPE;
             default:
-                throw  new IllegalArgumentException("Unknown URI:"+uri+"with match:"+match);
-
+                throw new IllegalArgumentException("Unknown URI:" + uri + "with match:" + match);
 
 
         }
@@ -112,7 +112,6 @@ public class PetProvider extends ContentProvider {
         }
 
 
-
         Integer gender = contentValues.getAsInteger(PetEntry.COLUMN_PET_GENDER);
         if (gender == null || !PetEntry.isValidGender(gender)) {
             throw new IllegalArgumentException("Pet require valid weight");
@@ -135,47 +134,57 @@ public class PetProvider extends ContentProvider {
             return null;
 
         }
+
+        getContext().getContentResolver().notifyChange(uri, null);
+
         return ContentUris.withAppendedId(uri, id);
     }
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
+        int rowsDeleted;
 
-
-        SQLiteDatabase sqLiteDatabase=petDbHelper.getWritableDatabase();
-        final int match=sUriMatcher.match(uri);
-        switch (match)
-        {
+        SQLiteDatabase sqLiteDatabase = petDbHelper.getWritableDatabase();
+        final int match = sUriMatcher.match(uri);
+        switch (match) {
             case PETS:
-                return sqLiteDatabase.delete(PetEntry.TABLE_NAME,selection,selectionArgs);
-
+                rowsDeleted = sqLiteDatabase.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             case PETS_ID:
-                selection=PetEntry._ID+"=?";
-                selectionArgs=new String[]{
-                        String.valueOf(ContentUris.parseId(uri))};
-                return  sqLiteDatabase.delete(PetEntry.TABLE_NAME,selection,selectionArgs);
-
+                selection = PetEntry._ID + "=?";
+                selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
+                rowsDeleted = sqLiteDatabase.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             default:
-                throw new IllegalArgumentException("Deletion is not supported for:"+uri);
+                throw new IllegalArgumentException("Deletion is not supported for " + uri);
         }
 
+        // If 1 or more rows were deleted, then notify all listeners that the data at the
+        // given URI has changed
+        if (rowsDeleted !=
+                0) {
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
+
+        // Return the number of rows deleted
+        return rowsDeleted;
     }
+
 
     @Override
     public int update(Uri uri, ContentValues contentValues, String selection, String[] selectionArgs) {
-        final int match=sUriMatcher.match(uri);
-        switch (match)
-        {
+        final int match = sUriMatcher.match(uri);
+        switch (match) {
             case PETS:
-                return updatePet(uri,contentValues,selection,selectionArgs);
+                return updatePet(uri, contentValues, selection, selectionArgs);
 
             case PETS_ID:
-                selection=PetEntry._ID+"=?";
-                selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
-                return updatePet(uri,contentValues,selection,selectionArgs);
+                selection = PetEntry._ID + "=?";
+                selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
+                return updatePet(uri, contentValues, selection, selectionArgs);
 
             default:
-                throw new IllegalArgumentException("Update is not supported for:"+uri);
+                throw new IllegalArgumentException("Update is not supported for:" + uri);
 
 
         }
@@ -183,43 +192,44 @@ public class PetProvider extends ContentProvider {
 
     private int updatePet(Uri uri, ContentValues contentValues, String selection, String[] selectionArgs) {
 
-        if (contentValues.containsKey(PetEntry.COLUMN_PET_NAME))
-        {
-            String name=contentValues.getAsString(PetEntry.COLUMN_PET_NAME);
-            if (name==null)
-            {
+        if (contentValues.containsKey(PetEntry.COLUMN_PET_NAME)) {
+            String name = contentValues.getAsString(PetEntry.COLUMN_PET_NAME);
+            if (name == null) {
                 throw new IllegalArgumentException("Pet requires a name");
 
             }
         }
 
-        if (contentValues.containsKey(PetEntry.COLUMN_PET_GENDER))
-        {
-            Integer gender=contentValues.getAsInteger(PetEntry.COLUMN_PET_GENDER);
-            if (gender==null||!PetEntry.isValidGender(gender))
-            {
+        if (contentValues.containsKey(PetEntry.COLUMN_PET_GENDER)) {
+            Integer gender = contentValues.getAsInteger(PetEntry.COLUMN_PET_GENDER);
+            if (gender == null || !PetEntry.isValidGender(gender)) {
                 throw new IllegalArgumentException("Pet requires a valid gender");
 
             }
         }
 
-    if (contentValues.containsKey(PetEntry.COLUMN_PET_WEIGHT))
-    {
-        Integer weight=contentValues.getAsInteger(PetEntry.COLUMN_PET_WEIGHT);
-        if (weight!=null&&weight<0)
-        {
-            throw new IllegalArgumentException("Pet requires a valid weight");
+        if (contentValues.containsKey(PetEntry.COLUMN_PET_WEIGHT)) {
+            Integer weight = contentValues.getAsInteger(PetEntry.COLUMN_PET_WEIGHT);
+            if (weight != null && weight < 0) {
+                throw new IllegalArgumentException("Pet requires a valid weight");
+            }
+
         }
 
-    }
-
-    if (contentValues.size()==0)
-        return 0;
+        if (contentValues.size() == 0)
+            return 0;
 
 
-    SQLiteDatabase sqLiteDatabase=petDbHelper.getWritableDatabase();
-    return sqLiteDatabase.update(PetEntry.TABLE_NAME,contentValues,selection,selectionArgs);
+        SQLiteDatabase sqLiteDatabase = petDbHelper.getWritableDatabase();
+        // Perform the update on the database and get the number of rows affected
+        int rowsUpdated = sqLiteDatabase.update(PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
 
+        // If 1 or more rows were updated, then notify all listeners that the data at the
+        // given URI has changed
+        if (rowsUpdated != 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
+        return rowsUpdated;
 
     }
 
